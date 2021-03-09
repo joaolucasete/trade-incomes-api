@@ -2,8 +2,11 @@ const Withdraw = require('../../models/withdraw')
 const Fund = require('../../models/fund')
 
 const withdrawsIndex = async (req, res) => {
+  const { status } = req.params
   try {
-    const withdraws = await Withdraw.find().where('status').equals(0)
+    const withdraws = await Withdraw.find()
+      .where('status')
+      .equals(0 || status)
     if (!withdraws.length) {
       return res.status(404).json({ error: 'Withdraws empty' })
     }
@@ -22,6 +25,7 @@ const withdrawsAccept = async (req, res) => {
     if (!withdrawDB) return res.status(404).json({ error: 'Not withdraw' })
 
     const fundDB = await Fund.findOne({ _id: withdrawDB.fundToWithdraw })
+
     const fundPropertiesUpdated =
       withdrawDB.Withdraw == fundDB.gained
         ? { status: 2 }
@@ -30,17 +34,13 @@ const withdrawsAccept = async (req, res) => {
             gained: fundDB.gained - withdrawDB.Withdraw
           }
 
-    const fundUpdated = await Fund.updateOne(
-      { _id: fundDB._id },
-      fundPropertiesUpdated
-    )
+    Promise.all([
+      Fund.updateOne({ _id: fundDB._id }, fundPropertiesUpdated),
 
-    const withdrawUpdated = await Withdraw.updateOne(
-      { _id: withdrawDB._id },
-      { status: 1 }
-    )
+      Withdraw.updateOne({ _id: withdrawDB._id }, { status: 1 })
+    ])
 
-    return res.json({ fundUpdated, withdrawUpdated })
+    return res.json({ message: 'Withdraw Accept' })
   } catch (error) {
     return res.status(404).json({ error: 'Withdraw Accept error' })
   }
